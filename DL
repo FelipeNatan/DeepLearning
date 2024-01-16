@@ -292,7 +292,7 @@ library('rpart')
 
 tree<-rpart(formula=medv~.,
             data=base_treino,
-            method = "anova") #acho que 'anova' é para regressão
+            method = "anova") 
 
 tree_predicted<-predict(tree,base_teste)
 
