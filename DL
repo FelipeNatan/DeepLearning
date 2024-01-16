@@ -1,5 +1,5 @@
 #CODIGO COMPLETO#
-#AULA 1# REDE NEURAL/DEEPLEARNING MANUAL PARA APRENDER O CONCEITO (ACURÁCIA INFERIOR A DE PACOTES)
+#PARTE 1# REDE NEURAL/DEEPLEARNING MANUAL PARA APRENDER O CONCEITO (ACURÁCIA INFERIOR A DE PACOTES)
 
 set.seed(0)
 
@@ -256,7 +256,7 @@ plot(train_model$cost_hist) #mostra que a função custo diminui quando aumento 
 
 
 
-#################################AULA 2 #######################################
+#################################PARTE 2 #######################################
 #Pacotes utilizados
 pacotes <- c("MASS","neuralnet","ISLR","mlbench","rpart")
 
@@ -517,7 +517,7 @@ acc_tree
 
 
 
-#AULA 3# REDES NEURAIS RECORRENTES (RNN) - na.omit/filter/select/rnn/ggplot
+#PARTE 3# REDES NEURAIS RECORRENTES (RNN) - na.omit/filter/select/rnn/ggplot
 #Pacotes utilizados
 pacotes <- c("rattle","rnn","ggplot2","dplyr")
 
@@ -718,7 +718,7 @@ table$var_pred<-(table$y_pred - lag(table$y_pred,n=1L))/lag(table$y_pred,n=1L)
 retorno<-table %>% filter(decisao==1) 
 mean(retorno$var_obs,na.rm=T)
 
-#AULA 4# DEEP LEARNING NÃO SUPERVISIONADO - DIMINUIÇÃO/RECONSTRUÇÃO DE FEATURES
+#PARTE 4# DEEP LEARNING NÃO SUPERVISIONADO - DIMINUIÇÃO/RECONSTRUÇÃO DE FEATURES
 #Instala pacotes
 pacotes <- c("devtools","ggplot2","dplyr","RBM")
 
