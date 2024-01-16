@@ -1,0 +1,840 @@
+#CODIGO COMPLETO#
+#AULA 1# REDE NEURAL/DEEPLEARNING MANUAL PARA APRENDER O CONCEITO (ACURÁCIA INFERIOR A DE PACOTES)
+
+set.seed(0)
+
+data<-read.csv(file="winequality-red.csv")
+
+data<-scale(data)
+
+#Train Teste Split
+train_test_split_index<-0.8*nrow(data)
+
+train<-data.frame(data[1:train_test_split_index,])
+test<-data.frame(data[(train_test_split_index+1):nrow(data),])
+
+#Padronizar dados para melhor performance
+train_x<-train[,1:11]
+train_y<-train[,12]
+
+test_x <- data.frame(test[1:11])
+test_y <- data.frame(test[12])
+
+#Transposição de matriz para facilitar a construção da rede neural manual (variáveis em linhas e não em colunas)
+train_x <- t(train_x)
+train_y <- t(train_y)
+
+test_x <- t(test_x )
+test_y <- t(test_y)
+
+
+#Função 1 - Criar arquitetura da rede
+
+getLayerSize<-function(x,y,hidden_neurons)
+{
+  n_x<-dim(x)[1] 
+  n_h<-hidden_neurons
+  n_y<-dim(y)[1]
+  
+  size<-list("n_x"=n_x, #quantidade de linhas de x = neurônios da camada de entrada
+             "n_h"=n_h, #quantidade de neurônios na camada escondida
+             "n_y"=n_y) #quantidade de linhas de y = neurônios da camada de saída
+  
+  return(size)
+}
+
+layer_size <- getLayerSize(train_x, train_y, hidden_neurons = 4)
+layer_size #lista com quantos neuronios de entrada, hidden e saída temos
+
+
+#Função 2 - Inicializar parâmetros (weights e biases) randomicamente
+### A partir da arquitetura, inicializamos os parâmetros randomicamente. 
+###O primeiro conjunto é W1 e b1. O segundo é  W2 and b2.
+###O valor destes parâmetros dependem do tamanho das camadas de entrada e saída.
+
+initializeParameters<-function(x,layer_size) 
+{
+ n_x<-layer_size$n_x
+ n_h<-layer_size$n_h
+ n_y<-layer_size$n_y
+    
+ w1<-matrix(data=runif(n_x*n_h), #quantidade de pesos é igual a quantidade de neurônios da camada anterior x quantidade de neuronios da camada posterior
+            nrow=n_h,            #runif gera uma distirbuição aleatória entre 0 e 1 com a quantidade de elementos que definirmos
+            ncol=n_x,
+            byrow = T) 
+ w2<-matrix(data=runif(n_h*n_y), #quantidade de pesos é igual a quantidade de neuronios da camada anterior x quantidade de neuronios da camada posterior
+            nrow=n_y,
+            ncol=n_h,
+            byrow=T)
+ 
+ params<-list("w1" = w1,       #pesos gerados aleatoriamente
+              "w2" = w2)
+ 
+ return(params)
+}
+ 
+init_params<-initializeParameters(x=train_x, 
+                                  layer_size=layer_size)
+init_params #pesos gerados aleatoriamente
+
+
+#Função 3 - Função de Ativação 
+      #Sigmoide (devolve valor entre 0 e 1)
+      
+    sigmoide<-function(x)
+      {
+        return(1 / (1 + exp(-x)))
+      }
+      
+     #Arco tangente (já tem no R)
+    
+    tanh()
+
+
+#Função 4 - Forward Propagation
+###Geração de resultados via operação matricial dos resultados obtidos previamente
+
+forwardPropagation <- function(x,params,layer_size)
+{
+  n_h=layer_size$n_h
+  n_y=layer_size$n_y
+  
+  w1<-params$w1       #pesos gerados aleatoriamente do primeiro link
+  w2<-params$w2       #pesos gerados aleatoriamente do segundo link
+  
+  z1<-w1%*%x          #operacão matricial 4x11 x 11x1279 
+  a1<-sigmoide(z1)
+  z2<-w2%*%a1         #operacao matricial 1x4 x 4x1279
+  a2<-sigmoide(z2)
+  
+  cache<-list("z1"=z1, #entre camada de entrada e hidden
+              "a1"=a1, #camada hidden
+              "z2"=z2, #entre camada hidden e saída
+              "a2"=a2) #camada de saída
+  
+  return(cache)
+}
+fwd_prop<-forwardPropagation(x=train_x,
+                   params = init_params,
+                   layer_size = layer_size)
+fwd_prop
+
+
+#Função 5 - Cost/Loss Function
+###Mean Squared Error
+
+computeCost<-function(y,cache)
+{
+  m<-dim(y)[2] #y é uma transposta e por isso estamos falando do nº de observações e não do número de variáveis
+  a2<-cache$a2
+  
+  cost<-sum((y-a2)^2)/m #soma do valor do quadro do erro divido pelo nº de observações
+  
+  return(cost)
+}
+
+cost<-computeCost(y=train_y,cache=fwd_prop)
+cost #o custo vai diminuindo quando formos aumentandos as 'épocas' (nº de interações/vezes que vamos fazer o processo)
+
+
+#Função 6 - Backpropagation
+### Essa parte exige conhecimento de cálculo diferencial para entender o gradiente. 
+###Entretanto, só irei dar a noção lógica do que está ocorrendo sem necessidade de adentrar no cálculo.
+###Para mais detalhes vide: https://rpubs.com/theairbend3r/bin-classification-small-nnet-scratch-r.
+
+backwardPropagation<-function(x,y,cache,params,layer_size)
+{
+ m<-dim(y)[2]
+ 
+ n_x<-layer_size$n_x
+ n_h<-layer_size$n_h
+ n_y<-layer_size$n_y
+ 
+ a2<-cache$a2
+ a1<-cache$a1
+ 
+ w1<-params$w1  #adicionei o w1 e w2 por conta própria, pois acho que foi esquecido no Rmarkdown
+ w2<-params$w2
+ 
+ dz2<-a2-y #diferença do predito/camada de saída e observado (erro)
+ dw2<-1/m * (dz2%*%t(a1)) #variacao de w2 = pequena fração do erro x neuronio hidden
+ 
+ dz1<-(t(w2)%*%dz2) * (1-a1^2) #diferença do z1 = dz2*t(w2) * '?' 
+ dw1<-1/m *(dz1 %*%t(x)) #variacao de w1 = pequena fração da dz1 x neuronio de entrada
+ 
+ grads<- list("dw1"=dw1, #variação dos pesos
+              "dw2"=dw2)
+ 
+ return(grads)
+}
+
+back_prop<-backwardPropagation(x=train_x,               #criei por conta própria
+                               y=train_y,
+                               cache=fwd_prop,
+                               params=init_params,
+                               layer_size = layer_size)
+
+back_prop
+
+#Função 7 - Atualizar pesos
+updateParameters<-function(grads,params,learning_rate)
+{
+  w1<-params$w1
+  w2<-params$w2
+  
+  dw1<-grads$dw1
+  dw2<-grads$dw2
+  
+  w1<-w1 - learning_rate*dw1
+  w2<-w2 - learning_rate*dw2
+  
+  updated_params<-list("w1"=w1,
+                       "w2"=w2)
+  
+  return(updated_params)
+}
+
+update_params<-updateParameters(grads = back_prop,
+                                params = init_params,
+                                learning_rate = 1/ncol(train_y)) #criei por conta própria
+
+
+update_params
+
+#Função 8 - Treinar Modelo
+
+trainModel<-function(x,y,num_iteration,hidden_neurons,learning_rate) #num_interation = época = vezes rodadas
+{
+  layer_size=getLayerSize(x,y,hidden_neurons)
+  init_params=initializeParameters(x,layer_size)
+  
+  cost_history<-c()
+  
+  for (i in 1:num_iteration){
+    fwd_prop<-forwardPropagation(x,init_params,layer_size)
+    cost<-computeCost(y,fwd_prop)
+    back_prop<-backwardPropagation(x,y,fwd_prop,init_params,layer_size)
+    update_params<-updateParameters(back_prop,init_params,learning_rate)
+    init_params<-update_params
+    cost_history<-c(cost_history,cost)
+  }
+  model_out<-list("updated_params"=update_params,
+                  "cost_hist"=cost_history)
+  
+  return(model_out)
+}
+
+#Aplicar o treinamento
+EPOCHS = 1000
+HIDDEN_NEURONS = 400
+LEARNING_RATE = 0.01
+
+train_model<-trainModel(x=train_x,
+                        y= train_y,
+                        num_iteration = EPOCHS,
+                        hidden_neurons = HIDDEN_NEURONS,
+                        learning_rate = LEARNING_RATE)
+
+train_model
+
+#Testar resultados
+layer_size<-getLayerSize(x=test_x,
+                         y=test_y,
+                         hidden_neurons = HIDDEN_NEURONS)
+params<-train_model$updated_params
+fwd_prop<-forwardPropagation(x=test_x,
+                             params = params,
+                             layer_size = layer_size)
+y_pred<-fwd_prop$a2
+
+compare<-rbind(y_pred,test_y)
+
+View(compare)
+
+plot(train_model$cost_hist) #mostra que a função custo diminui quando aumento as épocas (ver model_out na linha 220)
+
+
+
+
+#################################AULA 2 #######################################
+#Pacotes utilizados
+pacotes <- c("MASS","neuralnet","ISLR","mlbench","rpart")
+
+if(sum(as.numeric(!pacotes %in% installed.packages())) != 0){
+  instalador <- pacotes[!pacotes %in% installed.packages()]
+  for(i in 1:length(instalador)) {
+    install.packages(instalador, dependencies = T)
+    break()}
+  sapply(pacotes, require, character = T) 
+} else {
+  sapply(pacotes, require, character = T) 
+}
+
+library("MASS")
+
+data<-Boston
+head(data)
+
+#verifica se temos valores nulos
+data[is.na(data)==TRUE]
+
+#index treino
+set.seed(0)
+index_treino<-sample(x=1:nrow(data),
+                     size=round(0.80*nrow(data)))
+base_treino<-data[index_treino,]
+
+base_teste<-data[-index_treino,]
+
+#benchmark CART (árvore de regressão)
+set.seed(0)
+library('rpart')
+
+tree<-rpart(formula=medv~.,
+            data=base_treino,
+            method = "anova") #acho que 'anova' é para regressão
+
+tree_predicted<-predict(tree,base_teste)
+
+table<-cbind(base_teste$medv,tree_predicted)
+table
+
+mse_tree<-mean((tree_predicted-base_teste$medv)^2)
+
+mse_tree
+
+#NeuralNet
+#Padronizar dados
+set.seed(0)
+
+(x-min())/(max()-min())
+
+max<-apply(data, 2, max)
+min<-apply(data,2,min)
+data_scaled<-as.data.frame(scale(data,center=min, scale=max-min))
+
+#Criar bases de treino, validação e teste
+index_treino<-sample(1:(nrow(data_scaled)*0.75),size=(length((1:(nrow(data_scaled)*0.75)))*0.7),replace = F) 
+base_treino<-data_scaled[index_treino,]
+base_validacao<-data_scaled[(1:(nrow(data_scaled)*0.75)-1),][-index_treino,]
+base_teste<-data_scaled[((nrow(data_scaled)*0.75):nrow(data_scaled)),]
+
+y_treino<-as.data.frame(base_treino$medv)
+y_treino<-y_treino[,1]
+
+y_validacao<-as.data.frame(base_validacao$medv)
+y_validcao<-y_validacao[,1]
+
+y_teste<-as.data.frame(base_teste$medv)
+y_teste<-y_teste[,1]
+
+#Cria formula
+n<-names(data_scaled)
+f<-as.formula(paste("medv ~",paste(n[!n %in% "medv"], collapse = "+")))
+        #library(randomForest)
+        #library(tidyverse)
+        #rf<-randomForest(medv~.,data)
+        #top_variaveis<-rf$importance %>% as.data.frame %>%top_n(0.5*ncol(data)) %>% row.names
+        #top_variaveis<-paste(top_variaveis,collapse = "+")
+        #f2<-as.formula(paste("medv ~",paste(top_variaveis, collapse = "+" )))
+f3<-as.formula(paste("medv ~",paste(n[n %in% c("crim","indus","nox","rm","dis","ptratio","lstat")], collapse = "+"))) #não consegui aplicar f2 na neuralnet abaixo e fiz a f3 na mão
+        #Aplica rede neural multicamadas
+library(neuralnet)
+nn<-neuralnet(formula=f,
+              data=base_treino,
+              hidden=c(5,4,3,2),
+              linear.output = T)#quando não é binário e sim linear
+plot(nn)
+
+nn_predicted<-compute(nn,base_teste[,1:13]) #equivalente ao predict no pacote neuralnet
+nn_predicted<-nn_predicted$net.result*(max(data$medv)-min(data$med))+min(data$medv)
+
+base_teste$medv<-base_teste$medv*(max(data$medv)-min(data$medv))+min(data$medv)
+
+mse_nn<-mean((nn_predicted-base_teste$medv)^2)
+mse_nn
+
+
+plot(base_teste$medv,type = 'l',col="red",xlab = "x", ylab = "Valor Residencia")+ 
+lines(nn_predicted,col = "blue")
+
+{
+# teste com svm 
+#Criar bases de treino e teste kernel
+library(kernlab)
+library(foreach)
+library(doParallel)
+library(doSNOW)
+library(rJava)
+library(FSelector)
+library(mlbench)
+
+set.seed(0)
+sigma<- seq(0.000000000000001,2,length.out=10)
+C<-seq(1,1000,length.out=10)
+parametro<-as.data.frame(expand.grid(sigma=sigma,C=C))
+
+erro<-as.data.frame(rep(0.0,nrow(parametro)))
+
+for(i in 1:nrow(parametro))
+{
+  sigma<-parametro[i,1]
+  C<-parametro[i,2]
+  ## Inverse Multiquadratic 
+  Kernel<-function(x,y)
+  {
+    res<-1/(sqrt(sum((x-y)^2)+(sigma^2)))
+    return(res)
+  }
+  class(Kernel) <- "kernel"
+  
+  svm<-ksvm (f,data=base_treino,type="eps-svr",C=C,kernel=Kernel,scaled=T)
+  
+  predito<-predict(svm,base_validacao)
+  observado<-base_validacao$medv
+  erro[i,1]<-mean((predito-observado)^2)
+}
+erro<-as.numeric(erro[,1])
+parametro$erro<-erro
+
+sigma<-melhor_sigma<-parametro[which.min(parametro$erro),'sigma']
+C<-melhor_C<-parametro[which.min(parametro$erro),'C']
+
+## Inverse Multiquadratic 
+Kernel<-function(x,y)
+{
+  res<-1/(sqrt(sum((x-y)^2)+(sigma^2)))
+  return(res)
+}
+class(Kernel) <- "kernel"
+
+svm<-ksvm (f,data=base_treino,type="eps-svr",C=C,kernel=Kernel,scaled=T)
+predito<-predict(svm,base_teste)
+observado<-base_teste$medv
+erro<-mean((predito-observado)^2)
+erro
+
+base_treino<-as.data.frame(svm@xmatrix)
+index_svm_treino<-as.data.frame(svm@SVindex)
+index_svm_treino<-index_svm_treino[,1]
+
+base_treino$medv<-y_treino[index_svm_treino]
+
+#Aplica rede neural multicamadas
+library(neuralnet)
+nn_svm<-neuralnet(formula=f,
+              data=base_treino,
+              hidden=c(5,4,3,2),
+              linear.output = T)#quando não é binário e sim linear
+plot(nn_svm)
+
+nn_predicted<-compute(nn_svm,base_teste[,1:13]) #equivalente ao predict no pacote neuralnet
+nn_predicted<-nn_predicted$net.result*(max(data$medv)-min(data$med))+min(data$medv)
+
+base_teste$medv<-base_teste$medv*(max(data$medv)-min(data$medv))+min(data$medv)
+
+mse_nn_svm<-mean((nn_predicted-base_teste$medv)^2)
+mse_nn_svm
+
+mse_tree
+mse_nn
+mse_nn_svm
+}
+
+
+#Exercício 1
+library(ISLR)
+library(neuralnet)
+
+#Olhar os dados - data wrangling?
+data <- College
+
+#Interpolar possíveis NAs
+for (i in 1:ncol(data))
+{
+  data[which(is.na(data[,i]))==TRUE,i]<-mean(data[,i],na.rm=TRUE)
+}
+
+
+#Verificar se tem NAs
+sum(is.na(data))
+
+#Converter variável categória em binária
+private <- ifelse(data$Private == 'Yes', 1, 0)
+
+#Padronizar dados
+data<-data[2:ncol(data)]
+
+max<-apply(data,2,max)
+min<-apply(data,2, min)
+
+data_scaled<-data.frame(scale(data,center=min, scale=max-min))
+
+#Devolve variável target
+data_scaled$Private<-private
+
+set.seed(0)
+
+#Criar bases de treino e teste
+index_treino<-sample(1:nrow(data_scaled),0.70*nrow(data_scaled))
+
+base_treino<-data_scaled[index_treino,]
+base_teste<-data_scaled[-index_treino,]
+
+#NeuralNet
+set.seed(0)
+names<-colnames(data_scaled)
+f<-as.formula(paste("Private ~", paste(names[!names %in% "Private"],collapse = "+")))
+
+nn<-neuralnet(formula=f,
+              data=base_treino,
+              hidden=c(5,4),
+              linear.output = F) #linear.output=F quando é classificatorio (é binário e não linear)
+plot(nn)
+
+nn_predicted<-compute(nn,base_teste)
+nn_predicted$net.result<-sapply(nn_predicted$net.result,round,digits=0)
+
+table<-table(base_teste$Private,nn_predicted$net.result)
+
+acc_nn<-(table[1,1]+table[2,2])/sum(table)
+acc_nn
+
+#Comparação com CART
+set.seed(0)
+
+library(rpart)
+tree<-rpart(formula=f,
+            data=base_treino,
+            method='class')
+tree_predicted<-predict(tree,base_teste, type='class')
+
+table<-table(base_teste$Private,tree_predicted)
+acc_tree<-(table[1,1]+table[2,2])/sum(table)
+
+acc_nn
+acc_tree
+
+
+
+#AULA 3# REDES NEURAIS RECORRENTES (RNN) - na.omit/filter/select/rnn/ggplot
+#Pacotes utilizados
+pacotes <- c("rattle","rnn","ggplot2","dplyr")
+
+if(sum(as.numeric(!pacotes %in% installed.packages())) != 0){
+  instalador <- pacotes[!pacotes %in% installed.packages()]
+  for(i in 1:length(instalador)) {
+    install.packages(instalador, dependencies = T)
+    break()}
+  sapply(pacotes, require, character = T) 
+} else {
+  sapply(pacotes, require, character = T) 
+}
+
+#Invoca libs
+library(rattle)
+library(rnn)
+library(ggplot2)
+library(tidyverse)
+
+#Dados de temperatura da Austrália
+weatherAUS
+view(weatherAUS)
+
+#Dados temperatura apenas em Albury
+data<-weatherAUS %>% 
+  filter(Location == "Albury") %>%
+  select(c("Humidity9am","Humidity3pm"))
+
+summary(data)
+class(data)
+
+#Ajuste de dados
+data_cleaned<-na.omit(data)
+
+data_used<-data_cleaned[1:3000,] #usaremos samples de 30 linhas para o rnn, portanto queremos nrow multiplo de 30
+
+x<-data_used[,1] #estabelece a variável explicativa
+y<-data_used[,2] #estabelece a variável resposta
+
+Xscaled <-(x-min(x))/(max(x)-min(x))
+Yscaled <- (y - min(y)) / (max(y) - min(y))
+
+x<-Xscaled
+y<-Yscaled
+
+x <- as.matrix(x)
+y <- as.matrix(y)
+
+X<-matrix(x, nrow = 30) #converte 3000 observacoes do data_used em 100 samples com 30 observações cada
+Y<-matrix(y,nrow = 30)  #criamos assim 100 samples em ordem cronológica de 30 dias cada para passar sequências ao rnn 
+
+#Define index de colunas treino e teste
+index_treino<-1:(0.8*ncol(X))
+index_teste<-(last(index_treino)+1):ncol(X)
+
+#Modelo
+set.seed(12)
+rnn<-trainr(Y=Y[,index_treino],          
+            X=X[,index_treino],
+            learningrate = 0.01,
+            hidden_dim = 15,
+            network_type = 'rnn',       #posso usar aqui o lstm ou gru
+            numepochs = 100)          
+
+min(rnn$error)
+#Verifica se a quantidade de épocas está boa
+plot(colMeans(rnn$error),type='l',xlab='numepochs',ylab='errors')
+
+y_pred<-predictr(rnn,X[,index_teste])
+
+#Retorna resultado para um modo de 1 sample com 600 observações em vez de 20 samples de 30 observações
+Ytest<-matrix(Y[,index_teste],nrow=1)
+Ytest<-t(Ytest)
+
+Ypred<-matrix(y_pred,nrow=1)
+Ypred<-t(Ypred)
+
+result_data<-data.frame(cbind(Ytest,Ypred))
+colnames(result_data)<-c("Ytest","Ypred")
+result_data
+
+plot(as.vector(t(result_data$Ytest)), col = 'red', type='l',
+     main = "Actual vs Predicted Humidity: testing set",
+     ylab = "Y,Ypred")
+lines(as.vector(t(Ypred)), type = 'l', col = 'black')
+legend("bottomright", c("Predicted", "Actual"),
+       col = c("red","black"),
+       lty = c(1,1), lwd = c(1,1))
+
+#Cria função Rsquared: percentual de quanto a variação de uma variável é explicada pela outra
+rsq<-function(y_atual,y_predito)
+{
+  cor(y_atual,y_predito)^2
+}
+
+rsq(result_data$Ytest,result_data$Ypred) #a variabilidade do valor atual é X% explicada pela variabilidade do valor previsto, em outras palavras, quanto uma variável se ajusta a outra.
+
+
+#Exercício 1 # 
+#Aprimorar com variáveis: https://www.kaggle.com/code/colinflueck/mulit-stock-pred-with-fin-ratios-and-back-test/notebook
+library("rnn")
+library("dplyr")
+
+#Importa dados
+data <- read.csv("PETR4.SA.csv")
+data <-data[order(data$Date, decreasing = FALSE),] #do mais antigo para o mais atual
+
+#Cria bases
+fechamento_anterior<-as.data.frame(data$Close)
+fechamento<-lead(fechamento_anterior,n=1L)
+
+data<-cbind(fechamento,fechamento_anterior)
+
+data<-na.omit(data)
+
+colnames(data)<- c("y","x")
+
+head(data)
+
+#Cria matrizes e escala
+x<-matrix(data$x,nrow=31)
+y<-matrix(data$y,nrow=31)
+
+x_scaled<-(x-min(x))/(max(x)-min(x))      #ideal criar outro objeto quando precisar reconverter escala no final
+y_scaled<-(y-min(y))/(max(y)-min(y))
+
+#Cria index
+index_treino<-1:round(ncol(x_scaled)*0.8)
+index_teste<-(last(index_treino+1)):(ncol(x_scaled))
+
+#Aplica modelo
+set.seed(12)
+
+rnn<-trainr(Y=y_scaled[,index_treino],
+            X=x_scaled[,index_treino],
+            learningrate = 0.05,
+            hidden_dim = 10,
+            numepochs = 1000,
+            network_type = "rnn")
+
+mean(rnn$error)
+
+plot(colMeans(rnn$error),xlab='numepochs',ylab='error',type='line')
+
+y_pred<-predictr(rnn,x_scaled[,index_teste])
+y_obs<-y_scaled[,index_teste]
+
+y_pred<-matrix(y_pred,ncol=1)
+y_obs<-matrix(y_obs,ncol=1)
+
+mse<-mean((y_pred-y_obs)^2)
+
+#Análise R²
+rsq<-function(y_obs,y_pred)
+{
+  cor(y_obs,y_pred)^2
+}
+
+rsq(y_obs,y_pred)
+mean(y_obs)
+mean(y_pred)
+mse
+
+#Reverte escala
+y_obs_sem_escala<-y_scaled*(max(y)-min(y))+min(y)
+y_obs_sem_escala<-y_obs_sem_escala[,index_teste]
+y_obs_sem_escala<-matrix(y_obs_sem_escala,ncol=1)
+
+y_pred_sem_escala<-y_pred*(max(y)-min(y))+min(y)
+y_pred_sem_escala<-matrix(y_pred_sem_escala,ncol=1)
+
+#Confere se a reversão de escala deu certo
+round(rsq(y_obs_sem_escala,y_pred_sem_escala),digits = 10) == round(rsq(y_obs,y_pred),digits = 10)
+
+#Tabela preditiva
+table<-cbind(y_obs_sem_escala,y_pred_sem_escala)
+colnames(table)<-c("y_obs","y_pred")
+table<-data.frame(table)
+table$erro_quadrado<-(table$y_obs-table$y_pred)^2
+table$mse<-mean(table$erro_quadrado)
+head(table)
+
+table$decisao<-if_else(table$y_pred>(table$y_obs*1.01),1,0)
+
+head(table)
+
+for (i in 2:nrow(table))
+{
+  table$decisao[i]<-if_else(table$y_pred[i]>(table$y_pred[i-1]),1,0)
+    
+}
+sum(table$decisao)
+view(table)
+
+table$var_obs<-(table$y_obs - lag(table$y_obs,n=1L))/lag(table$y_obs,n=1L)
+table$var_pred<-(table$y_pred - lag(table$y_pred,n=1L))/lag(table$y_pred,n=1L)
+
+retorno<-table %>% filter(decisao==1) 
+mean(retorno$var_obs,na.rm=T)
+
+#AULA 4# DEEP LEARNING NÃO SUPERVISIONADO - DIMINUIÇÃO/RECONSTRUÇÃO DE FEATURES
+#Instala pacotes
+pacotes <- c("devtools","ggplot2","dplyr","RBM")
+
+if(sum(as.numeric(!pacotes %in% installed.packages())) != 0){
+  instalador <- pacotes[!pacotes %in% installed.packages()]
+  for(i in 1:length(instalador)) {
+    install.packages(instalador, dependencies = T)
+    break()}
+  sapply(pacotes, require, character = T) 
+} else {
+  sapply(pacotes, require, character = T) 
+}
+
+library("devtools")
+library("ggplot2")
+library("dplyr")
+
+install_github("TimoMatzen/RBM") 
+library("RBM") #Restricted Boltzmann Machine
+
+#Ver imagem
+data("MNIST")
+      #trainX = 40000 elementos com 784 pixels cada (28x28) para prever as 40000 observações simuladas
+      #trainY = 4000 observações reais para treinar
+
+image(matrix(MNIST$trainX[8,],nrow=28)) #reconstroi graficamente a observação 8 de trainX 
+MNIST$trainY[8]
+
+#Treina modelo
+set.seed(0)
+
+train<-MNIST$trainX
+
+modelRBM<-RBM(x=train,
+              n.iter=1000,
+              n.hidden=100, #número de neurônios na camada escondida
+              size.minibatch = 10, #aumenta velocidade computacional
+              plot=T)
+
+#Reconstroi imagem              
+set.seed(0)             
+testX<-MNIST$testX
+testY<-MNIST$testY
+
+testX[5,] #como são os pixels do quinto elemento
+testY[5] #qual é o número real/observado do quinto elemento
+
+ReconstructRBM(test=testX[5,],
+               model=modelRBM)
+
+#Deep Belief Network (DBN - empilhamento de Máquinas de Booltzmann)
+set.seed(0)
+library("RBM")
+library("devtools")
+
+trainX<-MNIST$trainX
+testX<-MNIST$testX
+
+model_stack<-StackRBM(x=trainX, 
+                      layers=c(100,100,100), #empilha 100 neurônios + 100 neurônios + 100 neurônios
+                      n.iter = 1000,
+                      size.minibatch = 10)
+
+ReconstructRBM(test=testX[5,],
+               model=model_stack,
+               layers=3) #3 camadas como visto acima
+               
+
+#####Classificação de Imagens####
+data("MNIST")
+
+set.seed(0)
+
+trainX<-MNIST$trainX
+trainY<-MNIST$trainY
+
+model_stack_class_RBM<-StackRBM(x=trainX,
+                     y=trainY,
+                     n.iter=1000,
+                     layers=c(100,50),
+                     size.minibatch = 10)
+
+#Prediz imagens e avalia performance (obs: não é um modelo preditivo/supervisionado, mas segue a mesma ideia)
+testX<-MNIST$testX
+testY<-MNIST$testY
+
+pred_RBM<-PredictRBM(test=testX,
+                     model=model_stack_class_RBM,
+                     labels = testY,
+                     layers = 2)
+pred_RBM
+
+#Exercício 1
+data("Fashion")
+
+Fashion$trainX <- Fashion$trainX[,1:2000]
+Fashion$trainY <- Fashion$trainY[1:2000]
+Fashion$testX <- Fashion$testX[,1:200]
+Fashion$testY <- Fashion$testY[1:200]
+
+trainX<-t(Fashion$trainX)
+trainY<-t(Fashion$trainY)
+testX<-t(Fashion$testX)
+testY<-t(Fashion$testY)
+
+#Treina modelo
+modelo<-StackRBM(x=trainX,
+                 y=trainY,
+                n.iter=1000,
+                layers = c(100, 50),
+                learning.rate = 0.1,
+                size.minibatch = 10,
+                )
+
+ReconstructRBM(test=testX[102,],
+               model=modelo,
+               layers = 2)
+
+
