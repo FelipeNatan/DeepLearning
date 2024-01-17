@@ -359,7 +359,7 @@ plot(base_teste$medv,type = 'l',col="red",xlab = "x", ylab = "Valor Residencia")
 lines(nn_predicted,col = "blue")
 
 {
-# teste com svm 
+# teste de boosting com svm 
 #Criar bases de treino e teste kernel
 library(kernlab)
 library(foreach)
